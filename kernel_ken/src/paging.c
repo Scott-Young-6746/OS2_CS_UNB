@@ -27,15 +27,15 @@ void alloc_frame(page_t *page, int is_kernel, int is_writeable)
 	uint32_t idx = 0x0;
 	if(page->frame)
 		return;
-		
+
 	while (idx < nframes)
     {
         if (frames[idx/ARCH] == BAD) // nothing free, exit early.
         	idx += ARCH;
-        	
+
         else if(frames[idx/ARCH]&(0x1 << (idx%ARCH)))
         	idx++;
-        	
+
         else
         {
     	    frames[(idx/ARCH)] |= (0x1 << (idx%ARCH));
@@ -54,29 +54,28 @@ void free_frame(page_t *page)
 {
     if (!page->frame)
         return;
-    
+
     frames[(page->frame/PAGE_SZ)/ARCH] &= ~(0x1 << (page->frame/PAGE_SZ)%ARCH);
     page->frame = 0x0;
 }
 
 void initialise_paging()
 {
-    // The size of physical memory. For the moment we 
+    // The size of physical memory. For the moment we
     // assume it is 16MB big.
     uint32_t mem_end_page = 0x1000000;
     nframes = mem_end_page / PAGE_SZ;
 
     frames = (uint32_t*)kmalloc_a(nframes/ARCH);
     memset(frames, 0, sizeof(uint32_t)*(nframes/ARCH));
-    
+
     // Let's make a page directory.
     kernel_directory = (page_directory_t*)kmalloc_a(sizeof(page_directory_t));
     memset(kernel_directory, 0, sizeof(page_directory_t));
-    
-    
+
     kernel_directory->physicalAddr = (uint32_t)kernel_directory->tablesPhysical;
     // Map some pages in the kernel heap area.
-    // Here we call get_page but not alloc_frame. This causes page_table_t's 
+    // Here we call get_page but not alloc_frame. This causes page_table_t's
     // to be created where necessary. We can't allocate frames yet because they
     // they need to be identity mapped first below, and yet we can't increase
     // placement_address between identity mapping and enabling the heap!
@@ -99,7 +98,7 @@ void initialise_paging()
     }
 
     // Now allocate those pages we mapped earlier.
-    i = KHEAP_START; 
+    i = KHEAP_START;
     while (i < KHEAP_START+KHEAP_INITIAL_SIZE)
     {
         alloc_frame( get_page(i, 1, kernel_directory), 0, 0);
@@ -163,13 +162,13 @@ void page_fault(registers_t *regs)
     asm volatile("mov %%cr2, %0" : "=r" (faulting_address));
     // Output an error message.
     monitor_write("Page fault! ( ");
-    
+
     monitor_write((!(regs->err_code & 0x1))?    "present ":"");		// Page not present
     monitor_write((regs->err_code & 0x2)?       "read-only ":"");	// Write operation?
     monitor_write((regs->err_code & 0x4)?       "user-mode ":"");	// Processor was in user-mode?
     monitor_write((regs->err_code & 0x8)?   	"reserved ":"");	// Overwritten CPU-reserved bits of page entry?
     monitor_write((regs->err_code & 0x10)?      "id'd ":"");		// Caused by an instruction fetch?
-    
+
     monitor_write(") at 0x");
     monitor_write_hex(faulting_address);
     monitor_write(" - EIP: ");

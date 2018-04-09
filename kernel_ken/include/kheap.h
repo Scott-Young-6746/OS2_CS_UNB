@@ -1,5 +1,5 @@
 // kheap.h -- Interface for kernel heap functions, also provides
-//            a placement malloc() for use before the heap is 
+//            a placement malloc() for use before the heap is
 //            initialised.
 //            Written for JamesM's kernel development tutorials.
 
@@ -51,12 +51,12 @@ heap_t *create_heap(uint32_t start, uint32_t end, uint32_t max, uint8_t supervis
    Allocates a contiguous region of memory 'size' in size. If page_align==1, it creates that block starting
    on a page boundary.
 **/
-void *alloc(uint32_t size, uint8_t page_align, heap_t *heap);
+void *halloc(uint32_t size, uint8_t page_align, heap_t *heap);
 
 /**
    Releases a block allocated with 'alloc'.
 **/
-void free(void *p, heap_t *heap);
+void hfree(void *p, heap_t *heap);
 
 /**
    Allocate a chunk of memory, sz in size. If align == 1,
@@ -82,7 +82,7 @@ uint32_t kmalloc_a(uint32_t sz);
 uint32_t kmalloc_p(uint32_t sz, uint32_t *phys);
 
 /**
-   Allocate a chunk of memory, sz in size. The physical address 
+   Allocate a chunk of memory, sz in size. The physical address
    is returned in phys. It must be page-aligned.
 **/
 uint32_t kmalloc_ap(uint32_t sz, uint32_t *phys);

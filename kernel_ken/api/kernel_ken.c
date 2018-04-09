@@ -1,12 +1,14 @@
 #include "kernel_ken.h"
 #include "monitor.h"
 #include "error.h"
+#include "kheap.h"
+#include "task.h"
 
 /*  ##############################################################################
-     __  __      ___ 
-    |__)|__)||\ | |  
+     __  __      ___
+    |__)|__)||\ | |
     |   | \ || \| |
-    
+
     You can simply have your implementation of
     the functions wrapper the sys_call_monitor* functions that are provided
     as part of the initital kernel code.
@@ -25,7 +27,7 @@ void print_hex(unsigned int n)
 }
 
     //Output an HEX integer to the monitor
-    
+
 
 void print_dec(unsigned int n)
 {
@@ -35,17 +37,17 @@ void print_dec(unsigned int n)
     // Output an integer to the monitor
 
 /*  ##############################################################################
-          __            __   __                    
-    |\/| |_  |\/| |\/| /  \ |__) \_/               
-    |  | |__ |  | |  | \__/ | \   |                
-                                                   
-                         __   __       __      ___ 
-    |\/|  /\  |\ |  /\  / _  |_  |\/| |_  |\ |  |  
-    |  | /--\ | \| /--\ \__) |__ |  | |__ | \|  |  
+          __            __   __
+    |\/| |_  |\/| |\/| /  \ |__) \_/
+    |  | |__ |  | |  | \__/ | \   |
+
+                         __   __       __      ___
+    |\/|  /\  |\ |  /\  / _  |_  |\/| |_  |\ |  |
+    |  | /--\ | \| /--\ \__) |__ |  | |__ | \|  |
 */
 void *alloc(unsigned int size, unsigned char page_align)
 {
-    return NULL;
+    return (page_align) ? kmalloc_a(size) : kmalloc(size);
 }
 
     // Allocates a contiguous region of memory 'size' in the user heap. If
@@ -54,35 +56,35 @@ void *alloc(unsigned int size, unsigned char page_align)
 
 void free(void *p)
 {
-    return;
+    return kfree(p);
 }
 
     // Releases a block from the user heap allocated with 'alloc'.
-    // p is a reference to the memory to be deallocated. 
+    // p is a reference to the memory to be deallocated.
 
 /*  ##############################################################################
-     __   __   __   __  __  __  __                 
-    |__) |__) /  \ /   |_  (_  (_                  
-    |    | \  \__/ \__ |__ __) __)                 
-                                                   
-                         __   __       __      ___ 
-    |\/|  /\  |\ |  /\  / _  |_  |\/| |_  |\ |  |  
-    |  | /--\ | \| /--\ \__) |__ |  | |__ | \|  |  
-                                                   
+     __   __   __   __  __  __  __
+    |__) |__) /  \ /   |_  (_  (_
+    |    | \  \__/ \__ |__ __) __)
+
+                         __   __       __      ___
+    |\/|  /\  |\ |  /\  / _  |_  |\/| |_  |\ |  |
+    |  | /--\ | \| /--\ \__) |__ |  | |__ | \|  |
+
     Processes will be scheduled according to priority. Priorities range from 1 to
     10. 1 is the highest. To prevent against high priority processes starving low
     priority processes, you are to implement dynamic priorities. At the expiration
-    of each quantum, the scheduler can decrease the priority of the current 
-    running process (thereby penalizing it for taking that much CPU time). 
+    of each quantum, the scheduler can decrease the priority of the current
+    running process (thereby penalizing it for taking that much CPU time).
     Eventually its priority will fall below that of the next highest process and
     that process will be allowed to run.
-    
+
     Another approach is to have the scheduler keep track of low priority
     processes that do not get a chance to run and increase their priority so that
     eventually the priority will be high enough so that the processes will get
     scheduled to run. Once it runs for its quantum, the priority can be brought
     back to the previous low level.
-    
+
     This periodic boosting of a process’ priority to ensure it gets a chance to
     run is called process aging. A simple way to implement aging is to simply
     increase every process’ priority and then have them get readjusted as they
@@ -90,7 +92,7 @@ void free(void *p)
 */
 void initialise_tasking()
 {
-    return;
+    initialise_processes();
 }
 
     // Initialises the tasking system. Any data structures or initialization of
@@ -100,7 +102,7 @@ void initialise_tasking()
 
 int fork()
 {
-    return NULL;
+    return fork_proc();
 }
 
     // Forks the current process, spawning a new one with a different
@@ -110,7 +112,7 @@ int fork()
 
 void exit()
 {
-    return;
+    task_exit();
 }
 
     // Terminates the current process, cleaning up the resources allocated
@@ -119,7 +121,7 @@ void exit()
 
 void yield()
 {
-    return;
+    task_switch();
 }
 
     // Causes the process to surrender the CPU. The result is that the process
@@ -133,36 +135,36 @@ int sleep(unsigned int secs)
 }
 
     // Causes the process to surrender the CPU and go to sleep for n seconds.
-    // The function returns 0 if the requested time has elapsed, or the 
+    // The function returns 0 if the requested time has elapsed, or the
     // number of seconds left to sleep, if the call was interrupted by a
     // signal handler.
 
 
 int getpid()
 {
-    return NULL;
+    return get_pid();
 }
 
     // Returns the pid of the current process.
 
 int setpriority(int pid, int new_priority)
 {
-    return NULL;
+    return set_task_prio(pid, new_priority);
 }
 
     // Set the priority of the process. pid is the process id returned by
     // getpid(). newpriority is the new priority value between 1 and 10,
     // where 1 is highest priority. The return value is the resulting
     // priority of the pid. If the pid is invalid then the return value is 0.
-    
+
 /*  ##############################################################################
-     __   __   __   __  __  __  __                                  
-    |__) |__) /  \ /   |_  (_  (_                                   
-    |    | \  \__/ \__ |__ __) __)                                  
-                                                                    
-     __           __       __   __         ___      ___    __       
-    (_  \_/ |\ | /   |__| |__) /  \ |\ | |  _/  /\   |  | /  \ |\ | 
-    __)  |  | \| \__ |  | | \  \__/ | \| | /__ /--\  |  | \__/ | \| 
+     __   __   __   __  __  __  __
+    |__) |__) /  \ /   |_  (_  (_
+    |    | \  \__/ \__ |__ __) __)
+
+     __           __       __   __         ___      ___    __
+    (_  \_/ |\ | /   |__| |__) /  \ |\ | |  _/  /\   |  | /  \ |\ |
+    __)  |  | \| \__ |  | | \  \__/ | \| | /__ /--\  |  | \__/ | \|
 
     A semaphore must be initialized by open_sem() before it can be used.
     Processes waiting on a semaphore are resumed on a first-come first-served
@@ -212,12 +214,12 @@ int close_sem(int s)
     // return 0, otherwise the semaphore id.
 
 /*  ##############################################################################
-           ___  __  __   __   __   __   __  __  __  __      
-    | |\ |  |  |_  |__) |__) |__) /  \ /   |_  (_  (_       
-    | | \|  |  |__ | \  |    | \  \__/ \__ |__ __) __)      
-                                                            
-     __  __                         __      ___    __       
-    /   /  \ |\/| |\/| /  \ |\ | | /    /\   |  | /  \ |\ | 
+           ___  __  __   __   __   __   __  __  __  __
+    | |\ |  |  |_  |__) |__) |__) /  \ /   |_  (_  (_
+    | | \|  |  |__ | \  |    | \  \__/ \__ |__ __) __)
+
+     __  __                         __      ___    __
+    /   /  \ |\/| |\/| /  \ |\ | | /    /\   |  | /  \ |\ |
     \__ \__/ |  | |  | \__/ | \| | \__ /--\  |  | \__/ | \|
 
     pipes are first-in-first-out bounded buffers. Elements are read in the same
@@ -252,10 +254,10 @@ unsigned int read(int fildes, void *buf, unsigned int nbyte)
 }
 
     // Read the first nbyte of bytes from the pipe fildes and store them in buf. The
-    // return value is the number of bytes successfully read. If the pipe is 
+    // return value is the number of bytes successfully read. If the pipe is
     // invalid, it returns -1.
-    
-    
+
+
 int close_pipe(int fildes)
 {
     return NULL;
@@ -263,5 +265,3 @@ int close_pipe(int fildes)
 
     // Close the pipe specified by fildes. It returns INVALID_PIPE if the fildes
     // is not valid.
-
-

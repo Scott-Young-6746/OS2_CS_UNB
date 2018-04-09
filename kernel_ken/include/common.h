@@ -7,6 +7,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#define true  1
+#define false 0
 
 void outb(uint16_t port, uint8_t value);
 uint8_t inb(uint16_t port);
