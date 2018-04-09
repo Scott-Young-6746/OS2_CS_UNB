@@ -9,12 +9,15 @@
 #include "kheap.h"
 #include "common.h"
 
+#define MAX_TASK 16
+
+#define VALID_TASK(id) ((id >= 0 && id<MAX_TASK))
+
 // The currently running task.
 volatile task_t *current_task = 0;
 volatile uint32_t ring_index = 0;
 volatile task_t tasks[16];
-volatile uint32_t pid_is_used[16];
-char stack[0x2000];
+volatile uint32_t pid_is_used;
 
 // Some externs are needed to access members in paging.c...
 extern page_directory_t *kernel_directory;
@@ -24,31 +27,62 @@ extern uint32_t initial_esp;
 extern uint32_t read_eip();
 extern void perform_task_switch(uint32_t, uint32_t, uint32_t, uint32_t);
 
+#define is_used_pid(pid) ((VALID_TASK(pid)) ? (pid_is_used & (0x1<<i)) : 0 )
+
+int unset_pid(int pid)
+{
+    if(!VALID_TASK(pid))
+      return 0;
+
+    pid_is_used &= (~(0x1<<pid));
+    return pid;
+}
+
+int set_pid(int pid)
+{
+  if(!VALID_TASK(pid))
+    return 0;
+
+  pid_is_used |= (0x1<<pid);
+  return pid;
+}
+
+int find_ff_pid()
+{
+  int i;
+  for(i=1; i<16; i++)
+  {
+    if(!is_used_pid(i))
+      return i;
+  }
+  return 0;
+}
+
 void initialise_processes()
 {
     // Rather important stuff happening, no interrupts please!
     asm volatile("cli");
 
     // Relocate the stack so we know where it is.
-    move_stack((void*)&stack[0x1fff], 0x2000);
-
+    move_stack((void*)0xE0000000, 0x2000);
     // Init structures
     for(int i=0; i<16; i++){
       memset(&tasks[i], 0, sizeof(task_t));
-      pid_is_used[i] = 0;
     }
 
     // Initialise the first task (kernel task)
     current_task = &tasks[0];
     current_task->id = 0;
-    current_task->esp = current_task->ebp = 0;
-    current_task->eip = 0;
     current_task->page_directory = current_directory;
-    current_task->kernel_stack = kmalloc_a(KERNEL_STACK_SIZE);
     current_task->starting_priority = 10;
     current_task->priority = 10;
     current_task->status = RUNNING;
-    pid_is_used[0] = 1;
+    pid_is_used = 0x1;
+
+    asm volatile("mov %%esp, %0" : "=r"(current_task->esp));
+    asm volatile("mov %%ebp, %0" : "=r"(current_task->ebp));
+    current_task->kernel_stack = 0xE0000000;
+    set_kernel_stack(0xE0000000);
 
     // Reenable interrupts.
     asm volatile("sti");
@@ -58,14 +92,14 @@ void move_stack(void *new_stack_start, uint32_t size)
 {
   // Commented out old move stack, it's (maybe) causing a heisenbug.
   uint32_t i;
-  //// Allocate some space for the new stack.
-  //for( i = (uint32_t)new_stack_start;
-  //     i >= ((uint32_t)new_stack_start-size);
-  //     i -= 0x1000)
-  //{
-  //  // General-purpose stack is in user-mode.
-  //  alloc_frame( get_page(i, 1, current_directory), 0 /* User mode */, 0 /* Is writable */ );
-  //}
+  // Allocate some space for the new stack.
+  for( i = (uint32_t)new_stack_start;
+       i >= ((uint32_t)new_stack_start-size);
+       i -= 0x1000)
+  {
+    // General-purpose stack is in user-mode.
+    alloc_frame( get_page(i, 1, current_directory), 0 /* User mode */, 0 /* Is writable */ );
+  }
 
 
   // Flush the TLB by reading and writing the page directory address again.
@@ -124,7 +158,9 @@ void task_switch()
     if (current_task->status == RUNNING){
       int current_is_high = 1;
       for(int i=0; i<16; i++){
-        if(i==current_task->id){
+        if(!is_used_pid(i)){
+          continue;
+        } else if(i==current_task->id){
           continue;
         } else if (tasks[i].priority <= current_task->priority){
           current_is_high = 0;
@@ -155,8 +191,10 @@ void task_switch()
     eip = read_eip();
 
     // Have we just switched tasks?
-    if (eip == 0x12345)
-        return;
+    if (eip == 0x12345){
+      asm volatile("sti");
+      return;
+    }
 
     // No, we didn't switch tasks. Let's save some register values and switch.
     current_task->eip = eip;
@@ -171,6 +209,7 @@ void task_switch()
     // Starting with first READY task after current,
     task_t* ready_task = 0;
     for(uint32_t i=ring_index+1; i<16; i++){
+      if(!is_used_pid(i)) continue;
       if(tasks[i].status == READY){
         ready_task = &tasks[i];
         break;
@@ -178,6 +217,7 @@ void task_switch()
     }
     if(!ready_task){
       for(uint32_t i=0; i<=ring_index; i++){
+        if(!is_used_pid(i)) continue;
         if(tasks[i].status == READY){
           ready_task = &tasks[i];
           break;
@@ -192,12 +232,14 @@ void task_switch()
     // task of that priority after the starting point
     uint32_t ready_id = ready_task->id;
     for(uint32_t i=ready_id+1; i<16; i++){
+      if(!is_used_pid(i)) continue;
       if(tasks[i].priority < ready_task->priority){
         ready_task = &tasks[i];
         ring_index = i;
       }
     }
     for(uint32_t i=0; i<ready_id; i++){
+      if(!is_used_pid(i)) continue;
       if(tasks[i].priority < ready_task->priority){
         ready_task = &tasks[i];
         ring_index = i;
@@ -216,8 +258,6 @@ void task_switch()
 
     // Change our kernel stack over.
     set_kernel_stack(current_task->kernel_stack+KERNEL_STACK_SIZE);
-    // Reenable interrupts.
-    asm volatile("sti");
     // Here we:
     // * Stop interrupts so we don't get interrupted.
     // * Temporarily put the new EIP location in ECX.
@@ -229,6 +269,7 @@ void task_switch()
     //   the next instruction.
     // * Jump to the location in ECX (remember we put the new EIP in there).
     perform_task_switch(eip, current_directory->physicalAddr, ebp, esp);
+    asm volatile("sti");
 }
 
 int fork_proc()
@@ -244,13 +285,11 @@ int fork_proc()
 
     // Create a new process.
     // Get next available pid
-    int next_pid = 0;
-    for(int i=0; i<16; i++){
-      if(!pid_is_used[i]){
-        next_pid = i;
-        pid_is_used[i] = 1;
-      }
-    }
+    int next_pid =  find_ff_pid();
+    if(!next_pid)
+      return -1; // ?? do more here!!!
+    set_pid(next_pid);
+
     task_t* new_task = &tasks[next_pid];
     new_task->id = next_pid;
     new_task->esp = new_task->ebp = 0;
@@ -259,6 +298,7 @@ int fork_proc()
     new_task->kernel_stack = kmalloc_a(KERNEL_STACK_SIZE);
     new_task->starting_priority = parent_task->starting_priority;
     new_task->priority = parent_task->priority;
+    new_task->status = READY;
     //current_task->kernel_stack = kmalloc_a(KERNEL_STACK_SIZE);
     //^^ was previous line, I changed the current_task to new task.
     // Note to self: if shit breaks, come back to this.
@@ -276,61 +316,35 @@ int fork_proc()
         new_task->ebp = ebp;
         new_task->eip = eip;
         // All finished: Reenable interrupts.
-        asm volatile("sti");
 
         // And by convention return the PID of the child.
-        return new_task->id;
+        task_switch();
     }
     else
     {
         // We are the child - by convention return 0.
-        return 0;
+        next_pid = -1;
     }
-
+    asm volatile("sti");
+    return next_pid+1;
 }
 
 void task_exit(){
+  // do more checks ?? dont kill th task here
+  unset_pid(current_task->id);
   current_task->status = DEAD;
-  pid_is_used[current_task->id] = 0;
   task_switch();
 }
 
 int get_pid()
 {
-    return current_task->id;
+    return current_task->id+1;
 }
 
 int set_task_prio(int pid, int prio){
-  if(pid < 0 || pid > 15)
+  if(!VALID_TASK(pid-1))
     return 0;
   tasks[pid].priority = prio;
   tasks[pid].starting_priority = prio;
   return prio;
-}
-
-void switch_to_user_mode()
-{
-    // Set up our kernel stack.
-    set_kernel_stack(current_task->kernel_stack+KERNEL_STACK_SIZE);
-
-    // Set up a stack structure for switching to user mode.
-    asm volatile("  \
-      cli; \
-      mov $0x23, %ax; \
-      mov %ax, %ds; \
-      mov %ax, %es; \
-      mov %ax, %fs; \
-      mov %ax, %gs; \
-                    \
-       \
-      mov %esp, %eax; \
-      pushl $0x23; \
-      pushl %esp; \
-      pushf; \
-      pushl $0x1B; \
-      push $1f; \
-      iret; \
-    1: \
-      ");
-
 }

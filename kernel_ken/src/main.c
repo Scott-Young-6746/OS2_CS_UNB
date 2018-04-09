@@ -14,14 +14,21 @@ extern uint32_t placement_address;
 
 uint32_t initial_esp;
 typedef unsigned int size_t;
+uint32_t db = 0;
 
-void stall(){
+void stall(int factor){
   int i;
   int j=0;
-  for(i=0; i<(1<<25); i++){
+  for(i=0; i<(1<<factor); i++){
     j += i;
   }
   print("\n");
+}
+
+void debug_print_stall(){
+  print("db_\0");
+  print_dec(db++);
+  stall(26);
 }
 
 void test_mem(){
@@ -32,85 +39,73 @@ void test_mem(){
     void* ptr1 = alloc(0x00000100, false);
     print("ptr1: \0");
     print_hex((uint32_t)ptr1);
-    print("\n\0");
-    stall();
+    stall(20);
 
     void* ptr2 = alloc(0x00000100, false);
     print("ptr2: \0");
     print_hex((uint32_t)ptr2);
-    print("\n\0");
-    stall();
+    stall(20);
 
     void* ptr3 = alloc(0x00000100, false);
     print("ptr3: \0");
     print_hex((uint32_t)ptr3);
-    print("\n\0");
-    stall();
+    stall(20);
 
     //free(ptr2);
 
     void* ptr4 = alloc(0x00000100, false);
     print("ptr4: \0");
     print_hex((uint32_t)ptr4);
-    print("\n\0");
-    stall();
+    stall(20);
 
     void* ptr5 = alloc(0x00000100, false);
     print("ptr5: \0");
     print_hex((uint32_t)ptr5);
-    print("\n\0");
+    stall(20);
 
-    stall();
-    free(ptr1);
-    free(ptr3);
-    free(ptr4);
-    free(ptr5);
+    //free(ptr1);
+    //free(ptr3);
+    //free(ptr4);
+    //free(ptr5);
 
     print("The following pointers should all be page aligned.\n");
 
     void* ptr6 = alloc(0x00000100, true);
     print("ptr6: \0");
     print_hex((uint32_t)ptr6);
-    print("\n\0");
-    stall();
+    stall(20);
 
     void* ptr7 = alloc(0x00000100, true);
     print("ptr7: \0");
     print_hex((uint32_t)ptr7);
-    print("\n\0");
-    stall();
+    stall(20);
 
     void* ptr8 = alloc(0x00000100, true);
     print("ptr8: \0");
     print_hex((uint32_t)ptr8);
-    print("\n\0");
-    stall();
+    stall(20);
 
     void* ptr9 = alloc(0x00000100, true);
     print("ptr9: \0");
     print_hex((uint32_t)ptr9);
-    print("\n\0");
-    stall();
+    stall(20);
 
     void* ptr10 = alloc(0x00000100, true);
     print("ptr10: \0");
     print_hex((uint32_t)ptr10);
-    print("\n\0");
-    stall();
+    stall(20);
 
     print("The following pointers should all be NULL (0).\n");
 
     void* ptr11 = alloc(0x00000000, true);
     print("ptr11: \0");
     print_hex((uint32_t)ptr11);
-    print("\n\0");
-    stall();
+    stall(20);
 
     void* ptr12 = alloc(0xFFFFFFFF, true);
     print("ptr12: \0");
     print_hex((uint32_t)ptr12);
-    print("\n\0");
-    stall();
+    stall(20);
 
     print("***********************\n\0");
     print("*Memory Tests Complete*\n\0");
@@ -124,10 +119,12 @@ void test_proc(){
     print("************************\n\0");
     print("*Begining Process Tests*\n\0");
     print("************************\n\0");
-
+    stall(20);
     int pid = fork();
+    debug_print_stall();
     if(!pid){
         print("Child process was here\n\0");
+        debug_print_stall();
         exit();
     } else if(pid == (0-1)) {
         print("Parent process failed to create child\n\0");
@@ -237,7 +234,7 @@ int kernel_main(struct multiboot *mboot_ptr, uint32_t initial_stack)
 
     // Initialise the PIT to 100Hz
     asm volatile("sti");
-    init_timer(50);
+    //init_timer(50);
 
     // Start paging.
     initialise_paging();

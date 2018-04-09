@@ -11,10 +11,10 @@ ASMFLAGS=-felf32
 
 CFLAGS=-Wall -Wextra \
 -g -ggdb \
--m32 -nostdlib -fno-builtin -fno-stack-protector -ffreestanding \
+-m32 -nostdlib -fno-builtin -fno-stack-protector -ffreestanding -O0\
 -Iinclude -Iapi -DWITH_FRAME_POINTER  -T$(LINK_DEF)
 
-.phony: all
+.phony: clean all debug
 
 # BUILD FUNCTION
 build: $(OBJ_SRC)
@@ -39,5 +39,9 @@ debug: clean build
 	gdb -q -iex 'set architecture $(ARCH)' \
 	-iex 'file $(KERNEL_OUT)' \
 	-iex 'symbol-file $(KERNEL_OUT)' \
-	-iex 'target remote | qemu-system-$(ARCH) -gdb stdio -S -kernel $(KERNEL_OUT) 2> /dev/null' \
-	-iex 'break initialise_processes'
+	-iex 'target remote | qemu-system-$(ARCH) -gdb stdio -S -m 512M -kernel $(KERNEL_OUT) 2> /dev/null' \
+	-iex 'break move_stack' \
+	-iex 'break fork_proc'
+
+qemu-int-check: clean build
+	qemu-system-$(ARCH) -d int -no-reboot -kernel $(KERNEL_OUT)

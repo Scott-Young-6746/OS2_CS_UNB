@@ -63,7 +63,7 @@ void initialise_paging()
 {
     // The size of physical memory. For the moment we
     // assume it is 16MB big.
-    uint32_t mem_end_page = 0x1000000;
+    uint32_t mem_end_page = 0x20000000;
     nframes = mem_end_page / PAGE_SZ;
 
     frames = (uint32_t*)kmalloc_a(nframes/ARCH);

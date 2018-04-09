@@ -11,10 +11,10 @@
 
 #define KERNEL_STACK_SIZE 2048       // Use a 2kb kernel stack.
 
-#define READY   0
+#define DEAD    0
 #define WAITING 1
 #define RUNNING 2
-#define DEAD    3
+#define READY   3
 
 // This structure defines a 'task' - a process.
 typedef struct task
