@@ -130,6 +130,7 @@ void test_proc(){
         print("Parent process failed to create child\n\0");
     } else {
         print("I print first.\n\0");
+        print("Sleeping for 4 seconds\n\0");
         sleep(4);
         print("The highest priority process is woke\n\0");
     }
@@ -152,7 +153,7 @@ void test_sem(){
     int pid = fork();
     if(!pid){
         wait(sid);
-        print("Child process was here\n\0");
+        print("Child Aquired semaphore\n\0");
         stall(26);
         print("Child released semaphore\n\0");
         signal(sid);
@@ -162,7 +163,7 @@ void test_sem(){
     } else {
         yield();
         wait(sid);
-        print("Parent process created child\n\0");
+        print("Parent Aquired semaphore\n\0");
         stall(26);
         print("Parent released semaphore\n\0");
         signal(sid);
@@ -205,8 +206,8 @@ void test_pipes(){
       }
       close_pipe(pipe_fd);
       size_t written = write(pipe_fd, (const void*)buff, 16);
-      print("Expect written is 0. written is ");
-      print_dec(written);
+      print("Expect written is (uint32_t)-1. written is ");
+      print_dec(written); // Fails because print_dec doesn't work for 2^32 - 1
       print("\n");
       print("**************************\n\0");
       print("*IPC Pipes Tests Complete*\n\0");

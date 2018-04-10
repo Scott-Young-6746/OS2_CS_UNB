@@ -239,7 +239,7 @@ int close_sem(int s)
 #define INVALID_PIPE -1
 
 int open_pipe(){
-    return NULL;
+    return internal_open_pipe();
 }
 
     // Initialize a new pipe and returns a descriptor. It returns INVALID_PIPE
@@ -248,7 +248,7 @@ int open_pipe(){
 
 unsigned int write(int fildes, const void *buf, unsigned int nbyte)
 {
-    return NULL;
+    return internal_write(fildes, buf, nbyte);
 }
 
     // Write the first nbyte of bytes from buf into the pipe fildes. The return value is the
@@ -258,7 +258,7 @@ unsigned int write(int fildes, const void *buf, unsigned int nbyte)
 
 unsigned int read(int fildes, void *buf, unsigned int nbyte)
 {
-    return NULL;
+    return internal_read(fildes, buf, nbyte);
 }
 
     // Read the first nbyte of bytes from the pipe fildes and store them in buf. The
@@ -268,7 +268,7 @@ unsigned int read(int fildes, void *buf, unsigned int nbyte)
 
 int close_pipe(int fildes)
 {
-    return NULL;
+    return internal_close_pipe(fildes);
 }
 
     // Close the pipe specified by fildes. It returns INVALID_PIPE if the fildes
