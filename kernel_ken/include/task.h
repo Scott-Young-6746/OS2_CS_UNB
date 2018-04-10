@@ -53,5 +53,7 @@ void move_stack(void *new_stack_start, uint32_t size);
 // Returns the pid of the current process.
 int get_pid();
 int fucking_sleep(unsigned int seconds);
+void queue(int pid);
+void dequeue(int pid);
 
 #endif

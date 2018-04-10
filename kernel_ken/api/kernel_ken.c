@@ -4,6 +4,8 @@
 #include "kheap.h"
 #include "task.h"
 #include "timer.h"
+#include "semaphores.h"
+#include "pipes.h"
 
 /*  ##############################################################################
      __  __      ___
@@ -178,7 +180,7 @@ int setpriority(int pid, int new_priority)
 */
 int open_sem(int n)
 {
-    return NULL;
+    return internal_open_sem(n);
 }
 
     // n is the number of processes that can be granted access to the critical
@@ -188,7 +190,7 @@ int open_sem(int n)
 
 int wait(int s)
 {
-    return NULL;
+    return internal_wait(s);
 }
 
     // The invoking process is requesting to acquire the semaphore, s. If the
@@ -200,7 +202,7 @@ int wait(int s)
 
 int signal(int s)
 {
-    return NULL;
+    return internal_signal(s);
 }
 
     // The invoking process will release the semaphore, if and only if the process
@@ -213,7 +215,7 @@ int signal(int s)
 
 int close_sem(int s)
 {
-    return NULL;
+    return internal_close_sem(s);
 }
 
     // Close the semaphore s and release any associated resources. If s is invalid then

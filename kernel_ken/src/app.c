@@ -150,9 +150,11 @@ void test_sem(){
         sid = open_sem(1);
 
     int pid = fork();
-    if(getpid() != 0){
+    if(!pid){
         wait(sid);
         print("Child process was here\n\0");
+        stall(26);
+        print("Child released semaphore\n\0");
         signal(sid);
         exit();
     } else if(pid == (0-1)) {
@@ -161,6 +163,8 @@ void test_sem(){
         yield();
         wait(sid);
         print("Parent process created child\n\0");
+        stall(26);
+        print("Parent released semaphore\n\0");
         signal(sid);
     }
 

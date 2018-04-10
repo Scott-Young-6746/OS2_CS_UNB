@@ -46,6 +46,16 @@ int fucking_sleep(unsigned int seconds){
   return 0;
 }
 
+void queue(int pid){
+  task_t* task = &tasks[pid-1];
+  task->status = IN_SEM_QUEUE;
+}
+
+void dequeue(int pid){
+  task_t* task = &tasks[pid-1];
+  task->status = READY;
+}
+
 short is_used_pid(int pid)
 {
   int result  = is_usd_pid(pid);
