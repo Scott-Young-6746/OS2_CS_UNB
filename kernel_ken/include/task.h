@@ -15,6 +15,7 @@
 #define WAITING 1
 #define RUNNING 2
 #define READY   3
+#define IN_SEM_QUEUE 4
 
 // This structure defines a 'task' - a process.
 typedef struct task
@@ -27,13 +28,14 @@ typedef struct task
     int32_t starting_priority;
     int32_t priority;
     int32_t status;
+    uint32_t wake_tick;
 } task_t;
 
 // Initialises the tasking system.
 void initialise_processes();
 
 // Called by the timer hook, this changes the running process.
-void task_switch();
+int task_switch();
 
 void switch_to_user_mode();
 
@@ -50,5 +52,6 @@ void move_stack(void *new_stack_start, uint32_t size);
 
 // Returns the pid of the current process.
 int get_pid();
+int fucking_sleep(unsigned int seconds);
 
 #endif

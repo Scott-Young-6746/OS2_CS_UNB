@@ -39,9 +39,7 @@ debug: clean build
 	gdb -q -iex 'set architecture $(ARCH)' \
 	-iex 'file $(KERNEL_OUT)' \
 	-iex 'symbol-file $(KERNEL_OUT)' \
-	-iex 'target remote | qemu-system-$(ARCH) -gdb stdio -S -m 512M -kernel $(KERNEL_OUT) 2> /dev/null' \
-	-iex 'break move_stack' \
-	-iex 'break fork_proc'
+	-iex 'target remote | qemu-system-$(ARCH) -gdb stdio -S -m 512M -kernel $(KERNEL_OUT) 2> /dev/null'
 
 qemu-int-check: clean build
 	qemu-system-$(ARCH) -d int -no-reboot -kernel $(KERNEL_OUT)

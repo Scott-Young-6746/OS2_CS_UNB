@@ -3,6 +3,7 @@
 #include "error.h"
 #include "kheap.h"
 #include "task.h"
+#include "timer.h"
 
 /*  ##############################################################################
      __  __      ___
@@ -121,7 +122,12 @@ void exit()
 
 void yield()
 {
-    task_switch();
+    int res = task_switch();
+    while(res == WAITING){
+      res = task_switch();
+      if(res != RUNNING)
+        asm volatile("hlt");
+    }
 }
 
     // Causes the process to surrender the CPU. The result is that the process
@@ -131,7 +137,7 @@ void yield()
 
 int sleep(unsigned int secs)
 {
-    return NULL;
+  return fucking_sleep(secs);
 }
 
     // Causes the process to surrender the CPU and go to sleep for n seconds.

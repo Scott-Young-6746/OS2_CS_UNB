@@ -119,12 +119,13 @@ void test_proc(){
     print("************************\n\0");
     print("*Begining Process Tests*\n\0");
     print("************************\n\0");
+    print("Forking\n\0");
     stall(20);
     int pid = fork();
-    debug_print_stall();
+    stall(20);
+    print("Forked\n\0");
     if(!pid){
         print("Child process was here\n\0");
-        debug_print_stall();
         exit();
     } else if(pid == (0-1)) {
         print("Parent process failed to create child\n\0");
@@ -134,25 +135,23 @@ void test_proc(){
     }
 
     pid = fork();
+    setpriority(1, 1);
+    yield();
     if(!pid){
-        setpriority(getpid(), 5);
-        yield();
         print("I printed second\n\0");
-        setpriority(getpid(), 1);
-        sleep(15);
-        print("The highest priority process is woke\n\0");
         exit();
-    } else if(pid == (0-1)) {
+    } else if(pid == -1) {
         print("Parent process failed to create child\n\0");
     } else {
-        yield();
         print("I print first.\n\0");
+        sleep(4);
+        print("The highest priority process is woke\n\0");
     }
 
     print("************************\n\0");
     print("*Process Tests Complete*\n\0");
     print("************************\n\0");
-
+    stall(26);
 }
 
 void test_sem(){
@@ -234,7 +233,6 @@ int kernel_main(struct multiboot *mboot_ptr, uint32_t initial_stack)
 
     // Initialise the PIT to 100Hz
     asm volatile("sti");
-    //init_timer(50);
 
     // Start paging.
     initialise_paging();
@@ -242,6 +240,7 @@ int kernel_main(struct multiboot *mboot_ptr, uint32_t initial_stack)
 
     // Start multitasking.
     initialise_tasking();
+    init_timer(50);
     test_proc();
 
     // Start semaphores.

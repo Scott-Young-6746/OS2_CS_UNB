@@ -7,5 +7,7 @@
 #include "common.h"
 
 void init_timer(uint32_t frequency);
+uint32_t sleep_to_tick(unsigned int seconds);
+int can_wake(uint32_t end_tick);
 
 #endif

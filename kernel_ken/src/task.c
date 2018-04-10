@@ -8,6 +8,7 @@
 #include "descriptor_tables.h"
 #include "kheap.h"
 #include "common.h"
+#include "timer.h"
 
 #define MAX_TASK 16
 
@@ -27,7 +28,37 @@ extern uint32_t initial_esp;
 extern uint32_t read_eip();
 extern void perform_task_switch(uint32_t, uint32_t, uint32_t, uint32_t);
 
-#define is_used_pid(pid) ((VALID_TASK(pid)) ? (pid_is_used & (0x1<<i)) : 0 )
+#define is_usd_pid(pid) ((VALID_TASK(pid)) ? (pid_is_used & (0x1<<pid)) : 0 )
+
+int fucking_sleep(unsigned int seconds){
+  asm volatile("cli");
+  uint32_t end_tick = sleep_to_tick(seconds);
+  if(can_wake(end_tick)) return 0;
+  current_task->status = WAITING;
+  current_task->wake_tick = end_tick;
+  asm volatile("sti");
+  int res = task_switch();
+  while(res == WAITING){
+    res = task_switch();
+    if(res != RUNNING)
+      asm volatile("hlt");
+  }
+  return 0;
+}
+
+short is_used_pid(int pid)
+{
+  int result  = is_usd_pid(pid);
+  if(!result) return 0;
+  task_t* task = &tasks[pid];
+  if( task->status == WAITING && can_wake(task->wake_tick)){
+    task->status = READY;
+    return 1;
+  } else if(task->status == READY){
+    return 1;
+  }
+  return 0;
+}
 
 int unset_pid(int pid)
 {
@@ -64,7 +95,7 @@ void initialise_processes()
     asm volatile("cli");
 
     // Relocate the stack so we know where it is.
-    move_stack((void*)0xE0000000, 0x2000);
+    move_stack((void*)0xE0000000, 0x10000);
     // Init structures
     for(int i=0; i<16; i++){
       memset(&tasks[i], 0, sizeof(task_t));
@@ -142,7 +173,7 @@ void move_stack(void *new_stack_start, uint32_t size)
   asm volatile("mov %0, %%ebp" : : "r" (new_base_pointer));
 }
 
-void task_switch()
+int task_switch()
 {
     // Rather important stuff happening, no interrupts please!
     asm volatile("cli");
@@ -151,7 +182,7 @@ void task_switch()
     if (!current_task){
       // Reenable interrupts
       asm volatile("sti");
-      return;
+      return 0;
     }
 
     //If we are still the highest priority task we stay current and return
@@ -170,7 +201,7 @@ void task_switch()
       if(current_is_high){
         // Reenable interrupts.
         asm volatile("sti");
-        return;
+        return current_task->status;
       }
     }
 
@@ -193,7 +224,7 @@ void task_switch()
     // Have we just switched tasks?
     if (eip == 0x12345){
       asm volatile("sti");
-      return;
+      return current_task->status;
     }
 
     // No, we didn't switch tasks. Let's save some register values and switch.
@@ -224,6 +255,25 @@ void task_switch()
         }
       }
     }
+    if(!ready_task){
+      if(current_task->status == DEAD){
+        for(uint32_t i=ring_index+1; i<16; i++){
+          if(!is_usd_pid(i)) continue;
+          ready_task = &tasks[i];
+          break;
+        }
+        if(!ready_task){
+          for(uint32_t i=0; i<=ring_index; i++){
+            if(!is_usd_pid(i)) continue;
+            ready_task = &tasks[i];
+            break;
+          }
+        }
+      } else {
+        asm volatile("sti");
+        return current_task->status;
+      }
+    }
 
     // find the highest prio task,
     // where highest is strictly lower priority values
@@ -247,7 +297,9 @@ void task_switch()
     }
     current_task->priority = current_task->starting_priority;
     current_task = ready_task;
-    current_task->status = RUNNING;
+    current_task->status = (current_task->status != READY) ?
+                            current_task->status :
+                            RUNNING;
 
     eip = current_task->eip;
     esp = current_task->esp;
@@ -270,6 +322,7 @@ void task_switch()
     // * Jump to the location in ECX (remember we put the new EIP in there).
     perform_task_switch(eip, current_directory->physicalAddr, ebp, esp);
     asm volatile("sti");
+    return current_task->status;
 }
 
 int fork_proc()
@@ -330,10 +383,10 @@ int fork_proc()
 }
 
 void task_exit(){
-  // do more checks ?? dont kill th task here
+  if(current_task->id == 0) return;
   unset_pid(current_task->id);
   current_task->status = DEAD;
-  task_switch();
+  int res = task_switch();
 }
 
 int get_pid()
@@ -344,7 +397,7 @@ int get_pid()
 int set_task_prio(int pid, int prio){
   if(!VALID_TASK(pid-1))
     return 0;
-  tasks[pid].priority = prio;
-  tasks[pid].starting_priority = prio;
+  tasks[pid-1].priority = prio;
+  tasks[pid-1].starting_priority = prio;
   return prio;
 }
