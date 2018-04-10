@@ -128,7 +128,7 @@ void yield()
     while(res == WAITING){
       res = task_switch();
       if(res != RUNNING)
-        asm volatile("hlt");
+        __asm__ volatile("hlt");
     }
 }
 

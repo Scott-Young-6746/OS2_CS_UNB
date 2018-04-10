@@ -59,29 +59,29 @@ void initialise_semaphores(){
 }
 
 int internal_open_sem(int n){
-  asm volatile("cli");
+  __asm__ volatile("cli");
   int sid = get_first_unset_sem();
   if(sid){
     semaphores[sid_index(sid)] = new_semaphore(sid, n);
     set_semaphore(sid);
   }
-  asm volatile("sti");
+  __asm__ volatile("sti");
   return sid;
 }
 
 int internal_close_sem(int s){
-  asm volatile("cli");
+  __asm__ volatile("cli");
   int sid = 0;
   if(VALID_SEM(s)){
     sid = s;
     set_semaphore(sid);
   }
-  asm volatile("sti");
+  __asm__ volatile("sti");
   return sid;
 }
 
 int internal_wait(int s){
-  asm volatile("cli");
+  __asm__ volatile("cli");
   int sid = 0;
   if(VALID_SEM(s)){
     sid = s;
@@ -92,13 +92,13 @@ int internal_wait(int s){
       queue(pid);
     }
   }
-  asm volatile("sti");
+  __asm__ volatile("sti");
   task_switch();
   return sid;
 }
 
 int internal_signal(int s){
-  asm volatile("cli");
+  __asm__ volatile("cli");
   int sid = 0;
   if(VALID_SEM(s)){
     sid = s;
@@ -109,7 +109,7 @@ int internal_signal(int s){
     }
     sem->value++;
   }
-  asm volatile("sti");
+  __asm__ volatile("sti");
   task_switch();
   return sid;
 }

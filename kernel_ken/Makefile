@@ -10,9 +10,9 @@ ARCH=i386
 ASMFLAGS=-felf32
 
 CFLAGS=-Wall -Wextra \
--g -ggdb \
+-g -ggdb -std=c11\
 -m32 -nostdlib -fno-builtin -fno-stack-protector -ffreestanding -O0\
--Iinclude -Iapi -DWITH_FRAME_POINTER  -T$(LINK_DEF)
+-Iinclude -Iapi -DWITH_FRAME_POINTER -D_GNU_SOURCE -T$(LINK_DEF)
 
 .phony: clean all debug
 

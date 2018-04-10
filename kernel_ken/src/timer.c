@@ -25,7 +25,7 @@ static void timer_callback(registers_t *regs)
     while(res == WAITING){
       res = task_switch();
       if(res == WAITING)
-        asm volatile("hlt");
+        __asm__ volatile("hlt");
     }
 }
 

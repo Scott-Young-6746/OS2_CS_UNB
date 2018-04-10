@@ -18,20 +18,20 @@
 // Write a byte out to the specified port.
 void outb(uint16_t port, uint8_t value)
 {
-    asm volatile ("outb %1, %0" : : "dN" (port), "a" (value));
+    __asm__ volatile ("outb %1, %0" : : "dN" (port), "a" (value));
 }
 
 uint8_t inb(uint16_t port)
 {
     uint8_t ret;
-    asm volatile("inb %1, %0" : "=a" (ret) : "dN" (port));
+    __asm__ volatile("inb %1, %0" : "=a" (ret) : "dN" (port));
     return ret;
 }
 
 uint16_t inw(uint16_t port)
 {
     uint16_t ret;
-    asm volatile ("inw %1, %0" : "=a" (ret) : "dN" (port));
+    __asm__ volatile ("inw %1, %0" : "=a" (ret) : "dN" (port));
     return ret;
 }
 
@@ -45,7 +45,7 @@ uint16_t inw(uint16_t port)
  */
 
 void * memcpy(void * restrict dest, const void * restrict src, size_t n) {
-	asm volatile("cld; rep movsb"
+	__asm__ volatile("cld; rep movsb"
 	            : "=c"((int){0})
 	            : "D"(dest), "S"(src), "c"(n)
 	            : "flags", "memory");
@@ -53,7 +53,7 @@ void * memcpy(void * restrict dest, const void * restrict src, size_t n) {
 }
 
 void * memset(void * dest, int c, size_t n) {
-	asm volatile("cld; rep stosb"
+	__asm__ volatile("cld; rep stosb"
 	             : "=c"((int){0})
 	             : "D"(dest), "a"(c), "c"(n)
 	             : "flags", "memory");
@@ -485,9 +485,9 @@ void break_point(){  return; }
 
 extern void panic(char *message, char *file, uint32_t line)
 {
-    break_point();   
+    break_point();
     // We encountered a massive problem and have to stop.
-    asm volatile("cli"); // Disable interrupts.
+    __asm__ volatile("cli"); // Disable interrupts.
 
     monitor_write("PANIC(");
     monitor_write(message);
@@ -504,7 +504,7 @@ extern void panic_assert(char *file, uint32_t line, char *desc)
 {
     break_point();
     // An assertion failed, and we have to panic.
-    asm volatile("cli"); // Disable interrupts.
+    __asm__ volatile("cli"); // Disable interrupts.
 
     monitor_write("ASSERTION-FAILED(");
     monitor_write(desc);

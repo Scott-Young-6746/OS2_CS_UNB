@@ -31,17 +31,17 @@ extern void perform_task_switch(uint32_t, uint32_t, uint32_t, uint32_t);
 #define is_usd_pid(pid) ((VALID_TASK(pid)) ? (pid_is_used & (0x1<<pid)) : 0 )
 
 int fucking_sleep(unsigned int seconds){
-  asm volatile("cli");
+  __asm__ volatile("cli");
   uint32_t end_tick = sleep_to_tick(seconds);
   if(can_wake(end_tick)) return 0;
   current_task->status = WAITING;
   current_task->wake_tick = end_tick;
-  asm volatile("sti");
+  __asm__ volatile("sti");
   int res = task_switch();
   while(res == WAITING){
     res = task_switch();
     if(res != RUNNING)
-      asm volatile("hlt");
+      __asm__ volatile("hlt");
   }
   return 0;
 }
@@ -102,7 +102,7 @@ int find_ff_pid()
 void initialise_processes()
 {
     // Rather important stuff happening, no interrupts please!
-    asm volatile("cli");
+    __asm__ volatile("cli");
 
     // Relocate the stack so we know where it is.
     move_stack((void*)0xE0000000, 0x10000);
@@ -120,13 +120,13 @@ void initialise_processes()
     current_task->status = RUNNING;
     pid_is_used = 0x1;
 
-    asm volatile("mov %%esp, %0" : "=r"(current_task->esp));
-    asm volatile("mov %%ebp, %0" : "=r"(current_task->ebp));
+    __asm__ volatile("mov %%esp, %0" : "=r"(current_task->esp));
+    __asm__ volatile("mov %%ebp, %0" : "=r"(current_task->ebp));
     current_task->kernel_stack = 0xE0000000;
     set_kernel_stack(0xE0000000);
 
     // Reenable interrupts.
-    asm volatile("sti");
+    __asm__ volatile("sti");
 }
 
 void move_stack(void *new_stack_start, uint32_t size)
@@ -145,12 +145,12 @@ void move_stack(void *new_stack_start, uint32_t size)
 
   // Flush the TLB by reading and writing the page directory address again.
   uint32_t pd_addr;
-  asm volatile("mov %%cr3, %0" : "=r" (pd_addr));
-  asm volatile("mov %0, %%cr3" : : "r" (pd_addr));
+  __asm__ volatile("mov %%cr3, %0" : "=r" (pd_addr));
+  __asm__ volatile("mov %0, %%cr3" : : "r" (pd_addr));
 
   // Old ESP and EBP, read from registers.
-  uint32_t old_stack_pointer; asm volatile("mov %%esp, %0" : "=r" (old_stack_pointer));
-  uint32_t old_base_pointer;  asm volatile("mov %%ebp, %0" : "=r" (old_base_pointer));
+  uint32_t old_stack_pointer; __asm__ volatile("mov %%esp, %0" : "=r" (old_stack_pointer));
+  uint32_t old_base_pointer;  __asm__ volatile("mov %%ebp, %0" : "=r" (old_base_pointer));
 
   // Offset to add to old stack addresses to get a new stack address.
   uint32_t offset            = (uint32_t)new_stack_start - initial_esp;
@@ -179,19 +179,19 @@ void move_stack(void *new_stack_start, uint32_t size)
   }
 
   // Change stacks.
-  asm volatile("mov %0, %%esp" : : "r" (new_stack_pointer));
-  asm volatile("mov %0, %%ebp" : : "r" (new_base_pointer));
+  __asm__ volatile("mov %0, %%esp" : : "r" (new_stack_pointer));
+  __asm__ volatile("mov %0, %%ebp" : : "r" (new_base_pointer));
 }
 
 int task_switch()
 {
     // Rather important stuff happening, no interrupts please!
-    asm volatile("cli");
+    __asm__ volatile("cli");
 
     // If we haven't initialised tasking yet, just return.
     if (!current_task){
       // Reenable interrupts
-      asm volatile("sti");
+      __asm__ volatile("sti");
       return 0;
     }
 
@@ -210,15 +210,15 @@ int task_switch()
       }
       if(current_is_high){
         // Reenable interrupts.
-        asm volatile("sti");
+        __asm__ volatile("sti");
         return current_task->status;
       }
     }
 
     // Read esp, ebp now for saving later on.
     uint32_t esp, ebp, eip;
-    asm volatile("mov %%esp, %0" : "=r"(esp));
-    asm volatile("mov %%ebp, %0" : "=r"(ebp));
+    __asm__ volatile("mov %%esp, %0" : "=r"(esp));
+    __asm__ volatile("mov %%ebp, %0" : "=r"(ebp));
 
     // Read the instruction pointer. We do some cunning logic here:
     // One of two things could have happened when this function exits -
@@ -233,7 +233,7 @@ int task_switch()
 
     // Have we just switched tasks?
     if (eip == 0x12345){
-      asm volatile("sti");
+      __asm__ volatile("sti");
       return current_task->status;
     }
 
@@ -280,7 +280,7 @@ int task_switch()
           }
         }
       } else {
-        asm volatile("sti");
+        __asm__ volatile("sti");
         return current_task->status;
       }
     }
@@ -331,14 +331,14 @@ int task_switch()
     //   the next instruction.
     // * Jump to the location in ECX (remember we put the new EIP in there).
     perform_task_switch(eip, current_directory->physicalAddr, ebp, esp);
-    asm volatile("sti");
+    __asm__ volatile("sti");
     return current_task->status;
 }
 
 int fork_proc()
 {
     // We are modifying kernel structures, and so cannot be interrupted.
-    asm volatile("cli");
+    __asm__ volatile("cli");
 
     // Take a pointer to this process' task struct for later reference.
     task_t *parent_task = current_task;
@@ -373,8 +373,8 @@ int fork_proc()
     if (current_task == parent_task)
     {
         // We are the parent, so set up the esp/ebp/eip for our child.
-        uint32_t esp; asm volatile("mov %%esp, %0" : "=r"(esp));
-        uint32_t ebp; asm volatile("mov %%ebp, %0" : "=r"(ebp));
+        uint32_t esp; __asm__ volatile("mov %%esp, %0" : "=r"(esp));
+        uint32_t ebp; __asm__ volatile("mov %%ebp, %0" : "=r"(ebp));
         new_task->esp = esp;
         new_task->ebp = ebp;
         new_task->eip = eip;
@@ -388,7 +388,7 @@ int fork_proc()
         // We are the child - by convention return 0.
         next_pid = -1;
     }
-    asm volatile("sti");
+    __asm__ volatile("sti");
     return next_pid+1;
 }
 

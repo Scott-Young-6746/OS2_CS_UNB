@@ -26,7 +26,7 @@ int kernel_main(struct multiboot *mboot_ptr, uint32_t initial_stack)
     monitor_clear();
 
     // Initialise the PIT to 100Hz
-    asm volatile("sti");
+    __asm__ volatile("sti");
 
     // Start paging.
     initialise_paging();

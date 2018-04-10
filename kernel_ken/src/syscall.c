@@ -40,7 +40,7 @@ void syscall_handler(registers_t *regs)
     // push them all onto the stack in the correct order. The function will
     // use all the parameters it wants, and we can pop them all back off afterwards.
     int ret;
-    asm volatile (" \
+    __asm__ volatile (" \
       push %1; \
       push %2; \
       push %3; \
