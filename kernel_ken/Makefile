@@ -6,7 +6,7 @@ ASM_SRC=$(wildcard asm/*.s)
 OBJ_SRC=$(patsubst %.s, %.o, $(ASM_SRC))
 LINK_DEF=link.ld
 KERNEL_OUT=bin/kernel.bin
-ARCH=i386
+ARCH=x86_64
 ASMFLAGS=-felf32
 
 CFLAGS=-Wall -Wextra \

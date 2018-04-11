@@ -1,222 +1,256 @@
+
 #include "kernel_ken.h"
 
-#include <stddef.h>
-#include <stdint.h>
+#define PRINT_HEADER(header)   if(getpid() == 1){print("\n\n======= "); print(header); print(" =======\n\n");}
+#define PRINT_SUB_HEADER(header)   if(getpid() == 1){print("\n\n------- "); print(header); print(" --------\n");}
+#define PRINT_SUB_SUB_HEADER(header)   if(getpid() == 1){print("\n-> "); print(header); print("\n");}
 
-#define true 1
-#define false 0
+#define BUFFER_SIZE 4095
 
-typedef unsigned int size_t;
-
-void stall(int factor){
-  int i;
-  int j=0;
-  for(i=0; i<(1<<factor); i++){
-    j += i;
-  }
-  print("\n");
-}
-
-void test_mem(){
-    print("***********************\n\0");
-    print("*Begining Memory Tests*\n\0");
-    print("***********************\n\0");
-
-    void* ptr1 = alloc(0x00000100, false);
-    print("ptr1: \0");
-    print_hex((uint32_t)ptr1);
-    stall(20);
-
-    void* ptr2 = alloc(0x00000100, false);
-    print("ptr2: \0");
-    print_hex((uint32_t)ptr2);
-    stall(20);
-
-    void* ptr3 = alloc(0x00000100, false);
-    print("ptr3: \0");
-    print_hex((uint32_t)ptr3);
-    stall(20);
-
-    //free(ptr2);
-
-    void* ptr4 = alloc(0x00000100, false);
-    print("ptr4: \0");
-    print_hex((uint32_t)ptr4);
-    stall(20);
-
-    void* ptr5 = alloc(0x00000100, false);
-    print("ptr5: \0");
-    print_hex((uint32_t)ptr5);
-    stall(20);
-
-    //free(ptr1);
-    //free(ptr3);
-    //free(ptr4);
-    //free(ptr5);
-
-    print("The following pointers should all be page aligned.\n");
-
-    void* ptr6 = alloc(0x00000100, true);
-    print("ptr6: \0");
-    print_hex((uint32_t)ptr6);
-    stall(20);
-
-    void* ptr7 = alloc(0x00000100, true);
-    print("ptr7: \0");
-    print_hex((uint32_t)ptr7);
-    stall(20);
-
-    void* ptr8 = alloc(0x00000100, true);
-    print("ptr8: \0");
-    print_hex((uint32_t)ptr8);
-    stall(20);
-
-    void* ptr9 = alloc(0x00000100, true);
-    print("ptr9: \0");
-    print_hex((uint32_t)ptr9);
-    stall(20);
-
-    void* ptr10 = alloc(0x00000100, true);
-    print("ptr10: \0");
-    print_hex((uint32_t)ptr10);
-    stall(20);
-
-    print("The following pointers should all be NULL (0).\n");
-
-    void* ptr11 = alloc(0x00000000, true);
-    print("ptr11: \0");
-    print_hex((uint32_t)ptr11);
-    stall(20);
-
-    void* ptr12 = alloc(0xFFFFFFFF, true);
-    print("ptr12: \0");
-    print_hex((uint32_t)ptr12);
-    stall(20);
-
-    print("***********************\n\0");
-    print("*Memory Tests Complete*\n\0");
-    print("***********************\n\0");
-
-
-}
-
-void test_proc(){
-
-    print("************************\n\0");
-    print("*Begining Process Tests*\n\0");
-    print("************************\n\0");
-    print("Forking\n\0");
-    stall(20);
-    int pid = fork();
-    stall(20);
-    print("Forked\n\0");
-    if(!pid){
-        print("Child process was here\n\0");
+void barrier()
+{
+    if(getpid() != 1)
         exit();
-    } else if(pid == (0-1)) {
-        print("Parent process failed to create child\n\0");
-    } else {
-        print("Parent process created child\n\0");
-        yield();
+}
+
+void test_paging()
+{
+    PRINT_HEADER(__func__);
+     int *value = alloc(sizeof(int),0);
+     *value = 0xDEADBEEF;
+
+     print_hex(*value);
+     free(value);
+     print("\n value after free: ");
+     print_hex(*value);
+
+     int *new_val = alloc(sizeof(int),0);
+        print("\n realloced value: ");
+     print_hex(*new_val);
+
+     print("\n");
+     if(new_val != value)
+        print("ERROR");
+
+    else
+        print("SUCCESS");
+
+    sleep(2);
+
+}
+
+void test_tasking()
+{
+    PRINT_HEADER(__func__);
+    // Create a new process in a new address space which is a clone of this
+    PRINT_SUB_HEADER("Forking");
+    PRINT_SUB_SUB_HEADER("fork once");
+    int ret = fork();
+    print("fork returned ");
+    print_hex(ret);
+    print(", and pid returned ");
+    print_hex(getpid());
+    print("\n");
+
+    PRINT_SUB_SUB_HEADER("fork twice");
+    int ret1 = fork();
+    print("fork returned ");
+    print_hex(ret1);
+    print(", and pid returned ");
+    print_hex(getpid());
+    print("\n");
+
+    PRINT_SUB_HEADER("Other");
+
+    PRINT_SUB_SUB_HEADER("exit all forks and printing all forks left running");
+    barrier();
+
+    print_hex(getpid());
+
+    PRINT_SUB_SUB_HEADER("sleep 5 seconds with count");
+    for(int i = 5; i >0; i--)
+    {
+        print_dec(i);
+        print(" ");
+        sleep(1);
     }
 
-    pid = fork();
-    setpriority(1, 1);
+    PRINT_SUB_HEADER("test yield");
+
+    PRINT_SUB_SUB_HEADER("before yield order");
+    ret = fork();
+    print_hex(getpid());
+    print(" ");
+    if(getpid()!=1)
+        yield();
+
+    PRINT_SUB_SUB_HEADER(" after yield order");
+    print_hex(getpid());
+    print(" ");
+
+    if(getpid()==1)
+        yield();
+
+    barrier();
+
+}
+
+void basic_test_semaphores()
+{
+    PRINT_HEADER(__func__);
+    int sem_id = open_sem(1);
+
+    fork();
+
+    wait(sem_id);
+
+    print("proc ");
+    print_dec(getpid());
+    print(" has the lock ... yielding\n");
     yield();
-    if(!pid){
-        print("I printed second\n\0");
-        exit();
-    } else if(pid == -1) {
-        print("Parent process failed to create child\n\0");
-    } else {
-        print("I print first.\n\0");
-        print("Sleeping for 4 seconds\n\0");
-        sleep(4);
-        print("The highest priority process is woke\n\0");
-    }
 
-    print("************************\n\0");
-    print("*Process Tests Complete*\n\0");
-    print("************************\n\0");
-    stall(26);
+    print("proc ");
+    print_dec(getpid());
+    print(" release and exit :");
+    print_dec(signal(sem_id));
+    print("\n");
+    barrier();
+
+    close_sem(sem_id);
+
 }
 
-void test_sem(){
-    print("**************************\n\0");
-    print("*Begining Semaphore Tests*\n\0");
-    print("**************************\n\0");
+void strong_semaphore_test()
+{
+    PRINT_HEADER(__func__);
+    int semid;
+    /* grab the semaphore created by seminit() */
+    if((semid = open_sem(1)) == -1)
+    {
+        print(" *** initsem error\n");
+        return;
+    }
 
-    int sid;
+    print("Successfully created a new semaphore set with id: ");
+    print_dec(semid);
+    print("\n\n");
+    int *data = alloc(sizeof(int),0);
+    *data =0;
+    wait(semid);
+    for(int i=0; i < 4; i++)
+    {
+        if(getpid() == 1)
+            fork();
+
+        if(getpid() != 1)
+        {
+            wait(semid);
+            break;
+        }
+    }
+
+
     if(getpid() == 1)
-        sid = open_sem(1);
-
-    int pid = fork();
-    if(!pid){
-        wait(sid);
-        print("Child Aquired semaphore\n\0");
-        stall(26);
-        print("Child released semaphore\n\0");
-        signal(sid);
-        exit();
-    } else if(pid == (0-1)) {
-        print("Parent process failed to create child\n\0");
-    } else {
+    {
+        signal(semid);
         yield();
-        wait(sid);
-        print("Parent Aquired semaphore\n\0");
-        stall(26);
-        print("Parent released semaphore\n\0");
-        signal(sid);
     }
 
-    print("**************************\n\0");
-    print("*Semaphore Tests Complete*\n\0");
-    print("**************************\n\0");
+    if(getpid() != 1)
+        ++(*data);
+
+    while(getpid() == 1 && (*data) < 4)
+        yield();
+
+    /* wait for all of the child processes */
+    print_dec(getpid());
+    print(" is unlocked and terminated \n");
+    signal(semid);
+    barrier();
+
+    close_sem(semid);
 }
 
-void test_pipes(){
-      print("**************************\n\0");
-      print("*Begining IPC Pipes Tests*\n\0");
-      print("**************************\n\0");
+void basic_test_pipe()
+{
+    PRINT_HEADER(__func__);
+    char test_text[] = "this is a pipe dream";
+    int pipe_id = open_pipe();
+    write(pipe_id,test_text,21);
+    print(test_text);
+    print(" --> ");
 
-      int pipe_fd = open_pipe();
-      int pid = fork();
-      char buff[16];
-      if(!pid){
-        char i;
-        for(i=0; i<16; i++)
-          buff[i] = i;
-        size_t written = write(pipe_fd, (const void*)buff, 16);
-        print("Expect written is 16. written is \0");
-        print_dec(written);
-        print("\n");
-        exit();
-      } else if(pid == (0-1)) {
-        print("Parent process failed to create child\n\0");
-      } else {
-				size_t bytes_read;
-        do{
-          print("Attempting to read bytes in 2 seconds\n\0");
-          sleep(2);
-          bytes_read = read(pipe_fd, (void*)buff, 16);
-        } while(!bytes_read);
-        print("Expect bytes_read is 16. bytes_read is \0");
-        print_dec(bytes_read);
-        print("\n");
-      }
-      close_pipe(pipe_fd);
-      size_t written = write(pipe_fd, (const void*)buff, 16);
-      print("Expect written is (uint32_t)-1. written is ");
-      print_dec(written); // Fails because print_dec doesn't work for 2^32 - 1
-      print("\n");
-      print("**************************\n\0");
-      print("*IPC Pipes Tests Complete*\n\0");
-      print("**************************\n\0");
+    char input[128];
+    read(pipe_id,input,21);
+    print(input);
 }
 
-void my_app(){
-  test_mem();
-  test_proc();
-  test_sem();
-  test_pipes();
+
+void strong_test_pipe()
+{
+    PRINT_HEADER(__func__);
+    char text_1[] =     ">**** this is the first line *<";
+    char text_2[] =     ">*** override the first line *<";
+
+    int pipe_id = open_pipe();
+    char input[40];
+
+    write(pipe_id,text_1,32);
+    read(pipe_id,input,32);
+    PRINT_SUB_SUB_HEADER("initial buffer head");
+    print(input);
+
+    //fill in the pipe
+    char dumb;
+    for(int i = 33 ; i < BUFFER_SIZE ; i++)
+    {
+        write(pipe_id, (void*)'$', 1);
+        read(pipe_id, &dumb, 1);
+    }
+
+    //read the head again to see if me can wrap around
+    read(pipe_id,input,32);
+    PRINT_SUB_SUB_HEADER("fill buffer and then reread the head");
+    print(input);
+
+    //overwrite the head
+    write(pipe_id,text_2,32);
+
+    //go back to the begining of the pipe
+    for(int i = 33 ; i < BUFFER_SIZE ; i++)
+    {
+        write(pipe_id, (void*)'$', 1);
+        read(pipe_id, &dumb, 1);
+    }
+
+    read(pipe_id,input,32);
+    PRINT_SUB_SUB_HEADER("overwrite the head");
+    print(input);
+
+
+}
+
+#define run_test(test)  barrier(); \
+                        test(); \
+                        barrier() ;
+
+void my_app()
+{
+    print("ENTERING KERNEL TEST PHASE");
+    print("\n============================================================================\n");
+
+    run_test( test_paging );
+
+    run_test( test_tasking );
+
+    run_test( basic_test_pipe );
+
+    run_test( strong_test_pipe );
+
+    run_test( basic_test_semaphores );
+
+    run_test( strong_semaphore_test );
+
+    print("\n============================================================================\n");
+    print("ALL TEST COMPLETE, \n\n ***starting user app\n");
 }

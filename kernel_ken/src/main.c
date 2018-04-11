@@ -41,7 +41,7 @@ int kernel_main(struct multiboot *mboot_ptr, uint32_t initial_stack)
     // Start IPC
     initialise_pipes();
 
-    user_app();
+    my_app();
 
     return 0;
 }
