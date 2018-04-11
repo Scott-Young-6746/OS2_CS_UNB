@@ -147,7 +147,7 @@ void test_sem(){
     print("**************************\n\0");
 
     int sid;
-    if(getpid() == 0)
+    if(getpid() == 1)
         sid = open_sem(1);
 
     int pid = fork();

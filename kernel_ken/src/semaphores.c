@@ -83,7 +83,7 @@ int internal_close_sem(int s){
 int internal_wait(int s){
   __asm__ volatile("cli");
   int sid = 0;
-  if(VALID_SEM(s)){
+  if(VALID_SEM(s) && sem_is_set(s)){
     sid = s;
     semaphore_t* sem = &semaphores[sid_index(sid)];
     sem->value--;
@@ -100,7 +100,7 @@ int internal_wait(int s){
 int internal_signal(int s){
   __asm__ volatile("cli");
   int sid = 0;
-  if(VALID_SEM(s)){
+  if(VALID_SEM(s) && sem_is_set(s)){
     sid = s;
     semaphore_t* sem = &semaphores[sid_index(sid)];
     if(sem<1){
