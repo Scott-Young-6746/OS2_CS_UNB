@@ -214,7 +214,7 @@ void test_pipes(){
       print("**************************\n\0");
 }
 
-void user_app(){
+void my_app(){
   test_mem();
   test_proc();
   test_sem();
