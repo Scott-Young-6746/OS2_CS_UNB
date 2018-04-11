@@ -93,7 +93,7 @@ int find_ff_pid()
   int i;
   for(i=1; i<16; i++)
   {
-    if(!is_used_pid(i))
+    if(!is_usd_pid(i))
       return i;
   }
   return 0;
